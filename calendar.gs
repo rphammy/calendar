@@ -200,7 +200,6 @@ var EMAIL_REGEX = new RegExp("[a-zA-Z+0-9\.-_]+@[a-zA-Z0-9\.-]+", 'i');
 // Globals
 var cache = JSONCacheService();
 var SETTINGS = getSettings();
-var eventId;
 
 function JSONCacheService() {
   var _cache = CacheService.getPublicCache();
