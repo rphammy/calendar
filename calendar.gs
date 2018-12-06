@@ -182,7 +182,7 @@ function isDigit(char) {
 
 
 // Configurable Values
-var SPREADSHEET_KEY = "1uesJ3Avayr09nt8HitO_bfb3GbJ_GtEXEIzn0S1tTKI";
+var SPREADSHEET_KEY = "1r3eWSRp11LD5VD3HFR3xzA44ZeMtpnAIxTkvZ0Th4MI";
 var RESPONSES_SHEET = "Form Responses 1";
 var LOG_SHEET = "Execution Log";
 var SETTINGS_SHEET = "__Settings";
