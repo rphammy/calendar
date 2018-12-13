@@ -32,6 +32,7 @@ function setRowData(sheet, object, optHeadersRange) {
   setRowsData(sheet, [object], optHeadersRange, object.__row_);
 }
 
+
 function setRowsData(sheet, objects, optHeadersRange, optFirstDataRowIndex) {
   var headersRange = optHeadersRange || sheet.getRange(1, 1, 1, sheet.getMaxColumns());
   var firstDataRowIndex = optFirstDataRowIndex || headersRange.getRowIndex() + 1;
