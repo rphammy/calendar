@@ -32,7 +32,6 @@ function setRowData(sheet, object, optHeadersRange) {
   setRowsData(sheet, [object], optHeadersRange, object.__row_);
 }
 
-
 function setRowsData(sheet, objects, optHeadersRange, optFirstDataRowIndex) {
   var headersRange = optHeadersRange || sheet.getRange(1, 1, 1, sheet.getMaxColumns());
   var firstDataRowIndex = optFirstDataRowIndex || headersRange.getRowIndex() + 1;
@@ -279,7 +278,7 @@ Utils.processTemplate = function(template, object) {
 }
 
 function getSpreadsheet() {
-  return SpreadsheetApp.openById(SPREADSHEET_KEY);
+  return SpreadsheetApp.openById(SPREADSHEET_KEY); 
 }
 
 function SheetHandler(sheet) {
@@ -329,7 +328,7 @@ function SheetHandler(sheet) {
       }
     });
   }
-  
+/*  
   var _createCalendarEventForDataRow = function(d) {
     // default to the user's calendar, unless we figure out other wise.
     var calendarId = d.emailAddress;
@@ -365,59 +364,64 @@ function SheetHandler(sheet) {
     d.eventId = event.getId(); //added this line to store eventId to the google spreadsheet
 
   }
-  
+*/
 
-  //trying to make code for deleting calendar event -rp
+  var _createPendingCalendarEvent = function(d) {
+    // default to the user's calendar, unless we figure out other wise.
+    var calendarId = d.emailAddress;
+    var guests = new Array();
+    
+    if (SETTINGS.WRITE_TO_GROUP_CALENDAR == 1) {
+      // The group calendar owns the event, invite the user and the coverage person
+      var calendarId = SETTINGS.GROUP_CALENDAR_ID;
+      guests.push(d.emailAddress);
+      guests.push(d[SETTINGS.COVERAGE_EMAIL_COLUMN_NAME]);
+    }
+    
+    
+    if (SETTINGS.INVITE_MANAGER_TO_EVENT == 1) {
+      // Regardless of where the event is, invite the manager if requested.
+      guests.push(d.actor);
+    }
+    
+    var title = Utils.processTemplate(SETTINGS.CALENDAR_EVENT_TITLE, d);
+    var description = Utils.processTemplate(SETTINGS.PENDING_CALENDAR_EVENT_TITLE, d);
+    var location = Utils.processTemplate(SETTINGS.CALENDAR_EVENT_LOCATION, d);
+    
+    // Create an event.
+    var calendar = CalendarApp.getCalendarById(calendarId);
+    Logger.log(calendarId);
+    Logger.log(calendar.getName());
+    var event = calendar.createEvent(title,new Date(d.leaveStartDate),new Date(d.lastDayOfLeave),{
+      description: description,
+      sendInvites: false,
+      location: location,
+      guests: guests.join()
+    });
+    Logger.log(event.getId());
+    d.eventId = event.getId(); //added this line to store eventId to the google spreadsheet
+
+    //set event color
+    event.setColor(CalendarApp.EventColor.YELLOW);
+    
+  }  
+
+  //Deletes the functional calendar event
   var _deleteCalendarEvent = function(d) {
     
     var calendarId = SETTINGS.GROUP_CALENDAR_ID;
     var calendar = CalendarApp.getCalendarById(calendarId);
     var event = calendar.getEventById(d.eventId);
-    event.deleteEvent();
-    
+    event.deleteEvent(); 
   }
   
-  /* Commented out for testing coverage email
-  //sends the approved emails
-  var approveByKey = function(k, user) {
-    var d = _getDataByKey(k);
-    d.state = APPROVED_STATE;
-    d.actor = user;
-    
-
-    //to check if the standard time columns needs to be re-initialized
-    d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
-    d.standardEndTime = Utilities.formatDate(d.lastDayOfLeave, "PST", "EEE, MMM d, yyyy hh:mm a");
-    
-    //added these two lines to get the cancel button to appear as a link!!!!
-    var scriptUri = ScriptApp.getService().getUrl();
-    d.cancel_url = scriptUri + "?i=" + d.identifier + '&state=' + CANCELLED_STATE;
-    
-    //these were preceeded by "var"
-    message = Utils.processTemplate(SETTINGS.USER_APPROVAL_EMAIL, d);
-    subject = Utils.processTemplate(SETTINGS.USER_APPROVAL_EMAIL_SUBJECT, d);
-    
-    
-    MailApp.sendEmail(d.emailAddress,subject,"",{ htmlBody: message });
-    
-    //send coverage email
-    if(SETTINGS.SEND_APPROVAL_NOTICE_EMAIL == 1) {
-    
-      message = Utils.processTemplate(SETTINGS.APPROVAL_NOTICE_EMAIL, d);
-      subject = Utils.processTemplate(SETTINGS.APPROVAL_NOTICE_EMAIL_SUBJECT, d);
-      MailApp.sendEmail(d[SETTINGS.COVERAGE_EMAIL_COLUMN_NAME].match(EMAIL_REGEX), subject, "",{ htmlBody: message });
-    }
-    
-    Logger.log(SETTINGS);
-    if (SETTINGS.CREATE_CALENDAR_EVENT == 1) {
-      Logger.log("Creating Calendar Event");
-      _createCalendarEventForDataRow(d);
-    }
-    
-    
-    setRowData(_sheet, d);
+  var _modifyApprovedCalendarEvent = function(d) {
+    var calendarId = SETTINGS.GROUP_CALENDAR_ID;
+    var calendar = CalendarApp.getCalendarById(calendarId);
+    var event = calendar.getEventById(d.eventId);
+    event.setColor(CalendarApp.Color.BLUE);
   }
-  */
+  
   
   //sends the pending emails to manager once coverage approves
   var approveByCoverageKey = function(k, user) {
@@ -488,7 +492,7 @@ function SheetHandler(sheet) {
     Logger.log(SETTINGS);
     if (SETTINGS.CREATE_CALENDAR_EVENT == 1) {
       Logger.log("Creating Calendar Event");
-      _createCalendarEventForDataRow(d);
+      //_createCalendarEventForDataRow(d);
     }
     
     
