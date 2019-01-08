@@ -182,7 +182,7 @@ function isDigit(char) {
 
 
 // Configurable Values
-var SPREADSHEET_KEY = "1B-plA_6fv7U4gZWtgQ746mVXF-DXY5o9lrOqFoAXHe4";
+var SPREADSHEET_KEY = "1irNjFnrTdTRTO7eeEe7kNMOj3zZeCpa2AAvfAXvym7U";
 var RESPONSES_SHEET = "Form Responses 1";
 var LOG_SHEET = "Execution Log";
 var SETTINGS_SHEET = "__Settings";
@@ -278,7 +278,7 @@ Utils.processTemplate = function(template, object) {
 }
 
 function getSpreadsheet() {
-  return SpreadsheetApp.openById(SPREADSHEET_KEY); 
+  return SpreadsheetApp.openById(SPREADSHEET_KEY);
 }
 
 function SheetHandler(sheet) {
@@ -299,7 +299,15 @@ function SheetHandler(sheet) {
     var scriptUri = ScriptApp.getService().getUrl();
     // hack some values on to the data just for email templates.
     d.accept_url = scriptUri + "?i=" + d.identifier + '&state=' + COVERAGE_APPROVED_STATE;
+
+    
     d.reject_url = scriptUri + "?i=" + d.identifier + '&state=' + DENIED_STATE;
+    d.rejectUrl = d.reject_url;
+    d.acceptUrl = d.accept_url;
+    
+    d.approvalUrl = 'Awaiting Coverage';
+    d.denyUrl = 'Awaiting Coverage';
+    
     d.coverage_email = coverage_email
 
 //sends pending email to coverage
@@ -328,7 +336,7 @@ function SheetHandler(sheet) {
       }
     });
   }
-/*  
+  
   var _createCalendarEventForDataRow = function(d) {
     // default to the user's calendar, unless we figure out other wise.
     var calendarId = d.emailAddress;
@@ -364,64 +372,59 @@ function SheetHandler(sheet) {
     d.eventId = event.getId(); //added this line to store eventId to the google spreadsheet
 
   }
-*/
+  
 
-  var _createPendingCalendarEvent = function(d) {
-    // default to the user's calendar, unless we figure out other wise.
-    var calendarId = d.emailAddress;
-    var guests = new Array();
-    
-    if (SETTINGS.WRITE_TO_GROUP_CALENDAR == 1) {
-      // The group calendar owns the event, invite the user and the coverage person
-      var calendarId = SETTINGS.GROUP_CALENDAR_ID;
-      guests.push(d.emailAddress);
-      guests.push(d[SETTINGS.COVERAGE_EMAIL_COLUMN_NAME]);
-    }
-    
-    
-    if (SETTINGS.INVITE_MANAGER_TO_EVENT == 1) {
-      // Regardless of where the event is, invite the manager if requested.
-      guests.push(d.actor);
-    }
-    
-    var title = Utils.processTemplate(SETTINGS.CALENDAR_EVENT_TITLE, d);
-    var description = Utils.processTemplate(SETTINGS.PENDING_CALENDAR_EVENT_TITLE, d);
-    var location = Utils.processTemplate(SETTINGS.CALENDAR_EVENT_LOCATION, d);
-    
-    // Create an event.
-    var calendar = CalendarApp.getCalendarById(calendarId);
-    Logger.log(calendarId);
-    Logger.log(calendar.getName());
-    var event = calendar.createEvent(title,new Date(d.leaveStartDate),new Date(d.lastDayOfLeave),{
-      description: description,
-      sendInvites: false,
-      location: location,
-      guests: guests.join()
-    });
-    Logger.log(event.getId());
-    d.eventId = event.getId(); //added this line to store eventId to the google spreadsheet
-
-    //set event color
-    event.setColor(CalendarApp.EventColor.YELLOW);
-    
-  }  
-
-  //Deletes the functional calendar event
+  //trying to make code for deleting calendar event -rp
   var _deleteCalendarEvent = function(d) {
     
     var calendarId = SETTINGS.GROUP_CALENDAR_ID;
     var calendar = CalendarApp.getCalendarById(calendarId);
     var event = calendar.getEventById(d.eventId);
-    event.deleteEvent(); 
+    event.deleteEvent();
+    
   }
   
-  var _modifyApprovedCalendarEvent = function(d) {
-    var calendarId = SETTINGS.GROUP_CALENDAR_ID;
-    var calendar = CalendarApp.getCalendarById(calendarId);
-    var event = calendar.getEventById(d.eventId);
-    event.setColor(CalendarApp.Color.BLUE);
+  /* Commented out for testing coverage email
+  //sends the approved emails
+  var approveByKey = function(k, user) {
+    var d = _getDataByKey(k);
+    d.state = APPROVED_STATE;
+    d.actor = user;
+    
+
+    //to check if the standard time columns needs to be re-initialized
+    d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
+    d.standardEndTime = Utilities.formatDate(d.lastDayOfLeave, "PST", "EEE, MMM d, yyyy hh:mm a");
+    
+    //added these two lines to get the cancel button to appear as a link!!!!
+    var scriptUri = ScriptApp.getService().getUrl();
+    d.cancel_url = scriptUri + "?i=" + d.identifier + '&state=' + CANCELLED_STATE;
+    
+    //these were preceeded by "var"
+    message = Utils.processTemplate(SETTINGS.USER_APPROVAL_EMAIL, d);
+    subject = Utils.processTemplate(SETTINGS.USER_APPROVAL_EMAIL_SUBJECT, d);
+    
+    
+    MailApp.sendEmail(d.emailAddress,subject,"",{ htmlBody: message });
+    
+    //send coverage email
+    if(SETTINGS.SEND_APPROVAL_NOTICE_EMAIL == 1) {
+    
+      message = Utils.processTemplate(SETTINGS.APPROVAL_NOTICE_EMAIL, d);
+      subject = Utils.processTemplate(SETTINGS.APPROVAL_NOTICE_EMAIL_SUBJECT, d);
+      MailApp.sendEmail(d[SETTINGS.COVERAGE_EMAIL_COLUMN_NAME].match(EMAIL_REGEX), subject, "",{ htmlBody: message });
+    }
+    
+    Logger.log(SETTINGS);
+    if (SETTINGS.CREATE_CALENDAR_EVENT == 1) {
+      Logger.log("Creating Calendar Event");
+      _createCalendarEventForDataRow(d);
+    }
+    
+    
+    setRowData(_sheet, d);
   }
-  
+  */
   
   //sends the pending emails to manager once coverage approves
   var approveByCoverageKey = function(k, user) {
@@ -438,8 +441,14 @@ function SheetHandler(sheet) {
     
     //added these two lines to get the cancel button to appear as a link!!!!
     var scriptUri = ScriptApp.getService().getUrl();
-    d.approval_url = scriptUri + "?i=" + d.identifier + '&state=' + MANAGER_APPROVED_STATE;
+    d.approval_url = scriptUri + "?i=" + d.identifier + '&state=' + MANAGER_APPROVED_STATE; 
     d.deny_url = scriptUri + "?i=" + d.identifier + '&state=' + DENIED_STATE;
+    
+    d.approvalUrl = d.approval_url;
+    d.denyUrl = d.deny_url;
+    
+    d.acceptUrl = 'Already Approved';
+    d.rejectUrl = 'Already Approved';
     
     //these were preceeded by "var"
     //send pending manager email
@@ -474,6 +483,11 @@ function SheetHandler(sheet) {
     var scriptUri = ScriptApp.getService().getUrl();
     d.cancel_url = scriptUri + "?i=" + d.identifier + '&state=' + CANCELLED_STATE;
     
+    d.approvalUrl = 'Already Denied'; 
+    d.denyUrl = 'Already Denied';
+    d.acceptUrl = 'Already Denied';
+    d.rejectUrl = 'Already Denied';
+    
     //these were preceeded by "var"
     message = Utils.processTemplate(SETTINGS.MANAGER_APPROVAL_EMAIL, d);
     subject = Utils.processTemplate(SETTINGS.MANAGER_APPROVAL_EMAIL_SUBJECT, d);
@@ -492,7 +506,7 @@ function SheetHandler(sheet) {
     Logger.log(SETTINGS);
     if (SETTINGS.CREATE_CALENDAR_EVENT == 1) {
       Logger.log("Creating Calendar Event");
-      //_createCalendarEventForDataRow(d);
+      _createCalendarEventForDataRow(d);
     }
     
     
@@ -511,6 +525,9 @@ function SheetHandler(sheet) {
     //to check if the standard time columns needs to be re-initialized
     d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
     d.standardEndTime = Utilities.formatDate(d.lastDayOfLeave, "PST", "EEE, MMM d, yyyy hh:mm a");
+    
+    d.approvalUrl = 'Already Denied'; 
+    d.denyUrl = 'Already Denied';
     
     message = Utils.processTemplate(SETTINGS.USER_DENIED_EMAIL, d);
     subject = Utils.processTemplate(SETTINGS.USER_DENIED_EMAIL_SUBJECT, d);
@@ -550,6 +567,9 @@ function SheetHandler(sheet) {
     
     d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
     d.standardEndTime = Utilities.formatDate(d.lastDayOfLeave, "PST", "EEE, MMM d, yyyy hh:mm a");
+    
+    d.approvalUrl = 'Cancelled'; 
+    d.denyUrl = 'Cancelled';
     
     //send email to manager
     message = Utils.processTemplate(SETTINGS.USER_CANCELLED_EMAIL, d);
