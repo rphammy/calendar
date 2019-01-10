@@ -300,15 +300,16 @@ function SheetHandler(sheet) {
     
     var scriptUri = ScriptApp.getService().getUrl();
     // hack some values on to the data just for email templates.
+
     d.accept_url = scriptUri + "?i=" + d.identifier + '&state=' + COVERAGE_APPROVED_STATE;
 
-    
     d.reject_url = scriptUri + "?i=" + d.identifier + '&state=' + DENIED_STATE;
     d.rejectUrl = d.reject_url;
     d.acceptUrl = d.accept_url;
     
-    d.approvalUrl = 'Awaiting Coverage';
-    d.denyUrl = 'Awaiting Coverage';
+    d.approvalButton = 'Awaiting Coverage Response';
+    d.denialButton = 'Awaiting Coverage Response';
+
     
     d.coverage_email = coverage_email
 
@@ -318,6 +319,7 @@ function SheetHandler(sheet) {
     
     MailApp.sendEmail(coverage_email,subject,"",{ htmlBody: message });
     
+
     //create calendar event
     Logger.log(SETTINGS);
     if (SETTINGS.CREATE_CALENDAR_EVENT == 1) {
@@ -325,6 +327,7 @@ function SheetHandler(sheet) {
       _createCalendarEventForDataRow(d);
     }
     
+
     setRowData(_sheet, d);  //changes sheet
   }
   
@@ -379,9 +382,11 @@ function SheetHandler(sheet) {
     });
     Logger.log(event.getId());
     d.eventId = event.getId(); //added this line to store eventId to the google spreadsheet
+
     
     //set event color to yellow for pending event
     event.setColor(CalendarApp.EventColor.YELLOW);
+
 
   }
   
@@ -396,6 +401,7 @@ function SheetHandler(sheet) {
     
   }
   
+
   //function to change the event color
   var _modifyApprovedCalendarEvent = function(d) {
     var calendarId = SETTINGS.GROUP_CALENDAR_ID;
@@ -425,11 +431,10 @@ function SheetHandler(sheet) {
     
     d.approvalUrl = d.approval_url;
     d.denyUrl = d.deny_url;
+  
+    d.approvalButton = '=HYPERLINK(INDIRECT("R[0]C[-1]", FALSE),"Approve")';
+    d.denialButton = '=HYPERLINK(INDIRECT("R[0]C[-1]", FALSE),"Deny")';
     
-    d.acceptUrl = 'Already Approved';
-    d.rejectUrl = 'Already Approved';
-    
-    //these were preceeded by "var"
     //send pending manager email
     message = Utils.processTemplate(SETTINGS.PENDING_MANAGER_EMAIL, d);
     subject = Utils.processTemplate(SETTINGS.PENDING_MANAGER_EMAIL_SUBJECT, d); 
@@ -462,12 +467,9 @@ function SheetHandler(sheet) {
     var scriptUri = ScriptApp.getService().getUrl();
     d.cancel_url = scriptUri + "?i=" + d.identifier + '&state=' + CANCELLED_STATE;
     
-    d.approvalUrl = 'Already Denied'; 
-    d.denyUrl = 'Already Denied';
-    d.acceptUrl = 'Already Denied';
-    d.rejectUrl = 'Already Denied';
+    d.approvalButton = 'Already Approved';
+    d.denialButton = 'Already Approved';
     
-    //these were preceeded by "var"
     message = Utils.processTemplate(SETTINGS.MANAGER_APPROVAL_EMAIL, d);
     subject = Utils.processTemplate(SETTINGS.MANAGER_APPROVAL_EMAIL_SUBJECT, d);
     
@@ -484,6 +486,7 @@ function SheetHandler(sheet) {
     
     //change event color to blue
       _modifyApprovedCalendarEvent(d);
+
     
     setRowData(_sheet, d);
   }
@@ -501,9 +504,10 @@ function SheetHandler(sheet) {
     d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
     d.standardEndTime = Utilities.formatDate(d.lastDayOfLeave, "PST", "EEE, MMM d, yyyy hh:mm a");
     
-    d.approvalUrl = 'Already Denied'; 
-    d.denyUrl = 'Already Denied';
 
+    d.approvalButton = 'Already Denied';
+    d.denialButton = 'Already Denied';
+    
     message = Utils.processTemplate(SETTINGS.USER_DENIED_EMAIL, d);
     subject = Utils.processTemplate(SETTINGS.USER_DENIED_EMAIL_SUBJECT, d);
     MailApp.sendEmail(d.emailAddress, subject, "",{ htmlBody: message });
@@ -514,6 +518,8 @@ function SheetHandler(sheet) {
     setRowData(_sheet, d);
   }
   
+ 
+  
   //cancellation emails
   var cancelByKey = function(k, user) {
     var d = _getDataByKey(k);
@@ -522,9 +528,9 @@ function SheetHandler(sheet) {
     
     d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
     d.standardEndTime = Utilities.formatDate(d.lastDayOfLeave, "PST", "EEE, MMM d, yyyy hh:mm a");
-    
-    d.approvalUrl = 'Cancelled'; 
-    d.denyUrl = 'Cancelled';
+       
+    d.approvalButton = 'Cancelled';
+    d.denialButton = 'Cancelled';
     
     //send email to manager
     message = Utils.processTemplate(SETTINGS.USER_CANCELLED_EMAIL, d);
@@ -584,22 +590,24 @@ function doGet(request) {
 */
   
   if(request.parameters.state == COVERAGE_APPROVED_STATE) {
-    handler.approveByCoverageKey(request.parameters.i, user);
+    handler.approveByCoverageKey(request.parameters.i, user);    
+    return HtmlService.createHtmlOutput(SETTINGS.COVERAGE_APPROVAL_PAGE_TEMPLATE);
   }
   
   if(request.parameters.state == MANAGER_APPROVED_STATE) {
-    handler.approveByManagerKey(request.parameters.i, user);
+    handler.approveByManagerKey(request.parameters.i, user);  
+    return HtmlService.createHtmlOutput(SETTINGS.MANAGER_APPROVAL_PAGE_TEMPLATE);
   }
   
   if(request.parameters.state == DENIED_STATE) {
     handler.denyByKey(request.parameters.i, user);
+    return HtmlService.createHtmlOutput(SETTINGS.DENIAL_PAGE_TEMPLATE);
   }
 
   if(request.parameters.state == CANCELLED_STATE) {  //added for cancel
     handler.cancelByKey(request.parameters.i, user);
+    return HtmlService.createHtmlOutput(SETTINGS.CANCELLATION_PAGE_TEMPLATE);
   }
-  
-  return HtmlService.createHtmlOutput(SETTINGS.CONFIRMATION_PAGE_TEMPLATE);
 }
 
 function onFormSubmit() {
