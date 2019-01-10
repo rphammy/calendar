@@ -32,7 +32,6 @@ function setRowData(sheet, object, optHeadersRange) {
   setRowsData(sheet, [object], optHeadersRange, object.__row_);
 }
 
-
 function setRowsData(sheet, objects, optHeadersRange, optFirstDataRowIndex) {
   var headersRange = optHeadersRange || sheet.getRange(1, 1, 1, sheet.getMaxColumns());
   var firstDataRowIndex = optFirstDataRowIndex || headersRange.getRowIndex() + 1;
@@ -183,7 +182,7 @@ function isDigit(char) {
 
 
 // Configurable Values
-var SPREADSHEET_KEY = "1B-plA_6fv7U4gZWtgQ746mVXF-DXY5o9lrOqFoAXHe4";
+var SPREADSHEET_KEY = "1irNjFnrTdTRTO7eeEe7kNMOj3zZeCpa2AAvfAXvym7U";
 var RESPONSES_SHEET = "Form Responses 1";
 var LOG_SHEET = "Execution Log";
 var SETTINGS_SHEET = "__Settings";
@@ -300,7 +299,15 @@ function SheetHandler(sheet) {
     var scriptUri = ScriptApp.getService().getUrl();
     // hack some values on to the data just for email templates.
     d.accept_url = scriptUri + "?i=" + d.identifier + '&state=' + COVERAGE_APPROVED_STATE;
+
+    
     d.reject_url = scriptUri + "?i=" + d.identifier + '&state=' + DENIED_STATE;
+    d.rejectUrl = d.reject_url;
+    d.acceptUrl = d.accept_url;
+    
+    d.approvalUrl = 'Awaiting Coverage';
+    d.denyUrl = 'Awaiting Coverage';
+    
     d.coverage_email = coverage_email
 
 //sends pending email to coverage
@@ -434,8 +441,14 @@ function SheetHandler(sheet) {
     
     //added these two lines to get the cancel button to appear as a link!!!!
     var scriptUri = ScriptApp.getService().getUrl();
-    d.approval_url = scriptUri + "?i=" + d.identifier + '&state=' + MANAGER_APPROVED_STATE;
+    d.approval_url = scriptUri + "?i=" + d.identifier + '&state=' + MANAGER_APPROVED_STATE; 
     d.deny_url = scriptUri + "?i=" + d.identifier + '&state=' + DENIED_STATE;
+    
+    d.approvalUrl = d.approval_url;
+    d.denyUrl = d.deny_url;
+    
+    d.acceptUrl = 'Already Approved';
+    d.rejectUrl = 'Already Approved';
     
     //these were preceeded by "var"
     //send pending manager email
@@ -469,6 +482,11 @@ function SheetHandler(sheet) {
     //added these two lines to get the cancel button to appear as a link!!!!
     var scriptUri = ScriptApp.getService().getUrl();
     d.cancel_url = scriptUri + "?i=" + d.identifier + '&state=' + CANCELLED_STATE;
+    
+    d.approvalUrl = 'Already Denied'; 
+    d.denyUrl = 'Already Denied';
+    d.acceptUrl = 'Already Denied';
+    d.rejectUrl = 'Already Denied';
     
     //these were preceeded by "var"
     message = Utils.processTemplate(SETTINGS.MANAGER_APPROVAL_EMAIL, d);
@@ -508,6 +526,9 @@ function SheetHandler(sheet) {
     d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
     d.standardEndTime = Utilities.formatDate(d.lastDayOfLeave, "PST", "EEE, MMM d, yyyy hh:mm a");
     
+    d.approvalUrl = 'Already Denied'; 
+    d.denyUrl = 'Already Denied';
+    
     message = Utils.processTemplate(SETTINGS.USER_DENIED_EMAIL, d);
     subject = Utils.processTemplate(SETTINGS.USER_DENIED_EMAIL_SUBJECT, d);
     MailApp.sendEmail(d.emailAddress, subject, "",{ htmlBody: message });
@@ -546,6 +567,9 @@ function SheetHandler(sheet) {
     
     d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
     d.standardEndTime = Utilities.formatDate(d.lastDayOfLeave, "PST", "EEE, MMM d, yyyy hh:mm a");
+    
+    d.approvalUrl = 'Cancelled'; 
+    d.denyUrl = 'Cancelled';
     
     //send email to manager
     message = Utils.processTemplate(SETTINGS.USER_CANCELLED_EMAIL, d);
