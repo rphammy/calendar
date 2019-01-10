@@ -480,6 +480,9 @@ function SheetHandler(sheet) {
       MailApp.sendEmail(d[SETTINGS.COVERAGE_EMAIL_COLUMN_NAME].match(EMAIL_REGEX), subject, "",{ htmlBody: message });
     }
     
+    //change event color to blue
+      _modifyApprovedCalendarEvent(d);
+    
     setRowData(_sheet, d);
   }
   
