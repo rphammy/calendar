@@ -182,7 +182,9 @@ function isDigit(char) {
 
 
 // Configurable Values
+
 var SPREADSHEET_KEY = "1a_joSO5eFezVsrxNDEb7HT1EqbvdV8EB6Z2zpu4914s";
+
 var RESPONSES_SHEET = "Form Responses 1";
 var LOG_SHEET = "Execution Log";
 var SETTINGS_SHEET = "__Settings";
@@ -501,13 +503,10 @@ function SheetHandler(sheet) {
     
     d.approvalUrl = 'Already Denied'; 
     d.denyUrl = 'Already Denied';
-    
+ 
     message = Utils.processTemplate(SETTINGS.USER_DENIED_EMAIL, d);
     subject = Utils.processTemplate(SETTINGS.USER_DENIED_EMAIL_SUBJECT, d);
     MailApp.sendEmail(d.emailAddress, subject, "",{ htmlBody: message });
-    
-     //delete calendar event
-    _deleteCalendarEvent(d); 
     
     setRowData(_sheet, d);
   }
