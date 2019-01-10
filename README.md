@@ -3,6 +3,7 @@
 This is an Absence Calendar for Enterprise Technology Services. The intention is to duplicate the functionality of the Sharepoint Absence Calendar Workflow integrated with Google Sheets, Google Forms, and Google Calendar
 
 The website for the calendar is here:
+
 *Note that only people in the ucsb.edu domain can access*
 https://sites.google.com/ucsb.edu/ats-home-site/
 
