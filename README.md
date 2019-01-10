@@ -12,8 +12,8 @@ This applicatioh is written in Google Apps Script
 
 ## Added Functionalities
 
-..* Minor Bug Fixes (Standard time)
-..* Coverage Processes
-..* Cancellation of Calendar
-..* Color-Coded Events 
-..* Manny View
+* Minor Bug Fixes (Standard time)
+* Coverage Processes
+* Cancellation of Calendar
+* Color-Coded Events 
+* Manny View
