@@ -182,7 +182,7 @@ function isDigit(char) {
 
 
 // Configurable Values
-var SPREADSHEET_KEY = "1uesJ3Avayr09nt8HitO_bfb3GbJ_GtEXEIzn0S1tTKI";
+var SPREADSHEET_KEY = "1dQ2mcxXC6HaMiPb8sU20zGQ505oGr9BzMNu4651CAAs";
 var RESPONSES_SHEET = "Form Responses 1";
 var LOG_SHEET = "Execution Log";
 var SETTINGS_SHEET = "__Settings";
@@ -192,10 +192,12 @@ var SETTINGS_CACHE_TTL = 900;
 // Constants
 var BLANK_STATE = undefined;
 var PENDING_STATE = "PENDING";
-var APPROVED_STATE = "APPROVED";
+//var APPROVED_STATE = "APPROVED";
+var COVERAGE_APPROVED_STATE = "COVERAGE APPROVED";
+var MANAGER_APPROVED_STATE = "MANAGER APPROVED";
 var DENIED_STATE = "DENIED";
 var CANCELLED_STATE = "CANCELLED";
-var EMAIL_REGEX = new RegExp("[a-zA-Z+0-9\.-_]+@[a-zA-Z0-9\.-]+", 'i'); 
+var EMAIL_REGEX = new RegExp("[a-zA-Z+0-9\._-]+@[a-zA-Z0-9\._-]+", 'i'); 
 
 // Globals
 var cache = JSONCacheService();
@@ -292,19 +294,26 @@ function SheetHandler(sheet) {
     d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
     d.standardEndTime = Utilities.formatDate(d.lastDayOfLeave, "PST", "EEE, MMM d, yyyy hh:mm a");
     
-    manager_email = d[SETTINGS.MANAGERS_EMAIL_COLUMN_NAME].match(EMAIL_REGEX);
+    coverage_email = d[SETTINGS.COVERAGE_EMAIL_COLUMN_NAME].match(EMAIL_REGEX);
     
     var scriptUri = ScriptApp.getService().getUrl();
     // hack some values on to the data just for email templates.
-    d.approval_url = scriptUri + "?i=" + d.identifier + '&state=' + APPROVED_STATE;
-    d.deny_url = scriptUri + "?i=" + d.identifier + '&state=' + DENIED_STATE;
-    d.manager_email = manager_email;
-
-//sends pending email to manager
-    message = Utils.processTemplate(SETTINGS.PENDING_MANAGER_EMAIL, d);
-    subject = Utils.processTemplate(SETTINGS.PENDING_MANAGER_EMAIL_SUBJECT, d);
     
-    MailApp.sendEmail(manager_email,subject,"",{ htmlBody: message });
+    d.accept_url = scriptUri + "?i=" + d.identifier + '&state=' + COVERAGE_APPROVED_STATE;
+    d.reject_url = scriptUri + "?i=" + d.identifier + '&state=' + DENIED_STATE;
+    d.rejectUrl = d.reject_url;
+    d.acceptUrl = d.accept_url;
+    
+    d.approvalButton = 'Awaiting Coverage Response';
+    d.denialButton = 'Awaiting Coverage Response';
+    
+    d.coverage_email = coverage_email
+
+//sends pending email to coverage
+    message = Utils.processTemplate(SETTINGS.PENDING_COVERAGE_EMAIL, d);
+    subject = Utils.processTemplate(SETTINGS.PENDING_COVERAGE_EMAIL_SUBJECT, d);
+    
+    MailApp.sendEmail(coverage_email,subject,"",{ htmlBody: message });
     
     setRowData(_sheet, d);  //changes sheet
   }
@@ -333,9 +342,10 @@ function SheetHandler(sheet) {
     var guests = new Array();
     
     if (SETTINGS.WRITE_TO_GROUP_CALENDAR == 1) {
-      // The group calendar owns the event, invite the user.
+      // The group calendar owns the event, invite the user and the coverage person
       var calendarId = SETTINGS.GROUP_CALENDAR_ID;
       guests.push(d.emailAddress);
+      guests.push(d[SETTINGS.COVERAGE_EMAIL_COLUMN_NAME]);
     }
     
     if (SETTINGS.INVITE_MANAGER_TO_EVENT == 1) {
@@ -365,17 +375,15 @@ function SheetHandler(sheet) {
 
   //trying to make code for deleting calendar event -rp
   var _deleteCalendarEvent = function(d) {
-    var calendarId = d.emailAddress;
-    var calendar = CalendarApp.getCalendarById(calendarId);
-    var event = calendar.getEventById(d.eventId);
-    event.deleteEvent();
     
     var calendarId = SETTINGS.GROUP_CALENDAR_ID;
     var calendar = CalendarApp.getCalendarById(calendarId);
     var event = calendar.getEventById(d.eventId);
     event.deleteEvent();
+    
   }
   
+  /* Commented out for testing coverage email
   //sends the approved emails
   var approveByKey = function(k, user) {
     var d = _getDataByKey(k);
@@ -415,15 +423,125 @@ function SheetHandler(sheet) {
     
     setRowData(_sheet, d);
   }
+  */
+  
+  //sends the pending emails to manager once coverage approves
+  var approveByCoverageKey = function(k, user) {
+    var d = _getDataByKey(k);
+    d.state = COVERAGE_APPROVED_STATE;
+    d.actor = user;
+    
+    //to check if the standard time columns needs to be re-initialized
+    d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
+    d.standardEndTime = Utilities.formatDate(d.lastDayOfLeave, "PST", "EEE, MMM d, yyyy hh:mm a");
+    
+    manager_email = d[SETTINGS.MANAGERS_EMAIL_COLUMN_NAME].match(EMAIL_REGEX);
+    d.manager_email = manager_email;
+    
+    //added these two lines to get the cancel button to appear as a link!!!!
+    var scriptUri = ScriptApp.getService().getUrl();
+    d.approval_url = scriptUri + "?i=" + d.identifier + '&state=' + MANAGER_APPROVED_STATE; 
+    d.deny_url = scriptUri + "?i=" + d.identifier + '&state=' + DENIED_STATE;
+    
+    d.approvalUrl = d.approval_url;
+    d.denyUrl = d.deny_url;
+  
+    d.approvalButton = '=HYPERLINK(INDIRECT("R[0]C[-1]", FALSE),"Approve")';
+    d.denialButton = '=HYPERLINK(INDIRECT("R[0]C[-1]", FALSE),"Deny")';
+    
+    //these were preceeded by "var"
+    //send pending manager email
+    message = Utils.processTemplate(SETTINGS.PENDING_MANAGER_EMAIL, d);
+    subject = Utils.processTemplate(SETTINGS.PENDING_MANAGER_EMAIL_SUBJECT, d); 
+    
+    MailApp.sendEmail(manager_email,subject,"",{ htmlBody: message });
+    
+    //send coverage approval email
+    message = Utils.processTemplate(SETTINGS.COVERAGE_APPROVAL_EMAIL, d);
+    subject = Utils.processTemplate(SETTINGS.COVERAGE_APPROVAL_EMAIL_SUBJECT, d); 
+    
+    MailApp.sendEmail(d.emailAddress,subject,"",{ htmlBody: message });
+       
+    setRowData(_sheet, d);
+  }
   //end request approved email
   
+  
+  //sends the approved emails to employee once manager also confirms 
+  var approveByManagerKey = function(k, user) {
+    var d = _getDataByKey(k);
+    d.state = MANAGER_APPROVED_STATE;
+    d.actor = user;
+    
+
+    //to check if the standard time columns needs to be re-initialized
+    d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
+    d.standardEndTime = Utilities.formatDate(d.lastDayOfLeave, "PST", "EEE, MMM d, yyyy hh:mm a");
+    
+    //added these two lines to get the cancel button to appear as a link!!!!
+    var scriptUri = ScriptApp.getService().getUrl();
+    d.cancel_url = scriptUri + "?i=" + d.identifier + '&state=' + CANCELLED_STATE;
+    
+    d.approvalButton = 'Already Approved';
+    d.denialButton = 'Already Approved';
+    
+    //these were preceeded by "var"
+    message = Utils.processTemplate(SETTINGS.MANAGER_APPROVAL_EMAIL, d);
+    subject = Utils.processTemplate(SETTINGS.MANAGER_APPROVAL_EMAIL_SUBJECT, d);
+    
+    
+    MailApp.sendEmail(d.emailAddress,subject,"",{ htmlBody: message });
+    
+    //send notification email to coverage person that manager has approved
+    if(SETTINGS.SEND_APPROVAL_NOTICE_EMAIL == 1) {
+    
+      message = Utils.processTemplate(SETTINGS.APPROVAL_NOTICE_EMAIL, d);
+      subject = Utils.processTemplate(SETTINGS.APPROVAL_NOTICE_EMAIL_SUBJECT, d);
+      MailApp.sendEmail(d[SETTINGS.COVERAGE_EMAIL_COLUMN_NAME].match(EMAIL_REGEX), subject, "",{ htmlBody: message });
+    }
+    
+    Logger.log(SETTINGS);
+    if (SETTINGS.CREATE_CALENDAR_EVENT == 1) {
+      Logger.log("Creating Calendar Event");
+      _createCalendarEventForDataRow(d);
+    }
+    
+    
+    setRowData(_sheet, d);
+  }
+  
+
   
   //sends the denial emails
   var denyByKey = function(k, user) {
     var d = _getDataByKey(k);
     d.state = DENIED_STATE;
+    d.actor = user;
+    //d.actor = d[SETTINGS.MANAGERS_EMAIL_COLUMN_NAME].match(EMAIL_REGEX);
+    
+    //to check if the standard time columns needs to be re-initialized
+    d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
+    d.standardEndTime = Utilities.formatDate(d.lastDayOfLeave, "PST", "EEE, MMM d, yyyy hh:mm a");
+    
+    d.approvalButton = 'Already Denied';
+    d.denialButton = 'Already Denied';
+    
+    message = Utils.processTemplate(SETTINGS.USER_DENIED_EMAIL, d);
+    subject = Utils.processTemplate(SETTINGS.USER_DENIED_EMAIL_SUBJECT, d);
+    MailApp.sendEmail(d.emailAddress, subject, "",{ htmlBody: message });
+    
+    setRowData(_sheet, d);
+  }
+  
+  
+  //sends the denial by coverage emails
+  
+  /*
+  var denyByCoverageKey = function(k, user) {
+    var d = _getDataByKey(k);
+    d.state = COVERAGE_DENIED_STATE;
     //d.actor = user;
-    d.actor = d[SETTINGS.MANAGERS_EMAIL_COLUMN_NAME].match(EMAIL_REGEX);
+    d.actor = user;
     
     //to check if the standard time columns needs to be re-initialized
     d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
@@ -435,10 +553,10 @@ function SheetHandler(sheet) {
     
     setRowData(_sheet, d);
   }
+  */
   
   
-    //cancellation emails
-    
+  //cancellation emails
   var cancelByKey = function(k, user) {
     var d = _getDataByKey(k);
     d.state = CANCELLED_STATE;
@@ -446,6 +564,9 @@ function SheetHandler(sheet) {
     
     d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
     d.standardEndTime = Utilities.formatDate(d.lastDayOfLeave, "PST", "EEE, MMM d, yyyy hh:mm a");
+       
+    d.approvalButton = 'Cancelled';
+    d.denialButton = 'Cancelled';
     
     //send email to manager
     message = Utils.processTemplate(SETTINGS.USER_CANCELLED_EMAIL, d);
@@ -467,8 +588,11 @@ function SheetHandler(sheet) {
 
   return {
     'processSheet': processSheet,
-    'approveByKey': approveByKey,
+    //'approveByKey': approveByKey,
+    'approveByCoverageKey': approveByCoverageKey,
+    'approveByManagerKey': approveByManagerKey,
     'denyByKey': denyByKey,
+    //'denyCoverageByKey': denyByCoverageKey,
     'cancelByKey': cancelByKey //added for cancel
   }
 };
@@ -494,19 +618,40 @@ function doGet(request) {
   
   var user = Session.getActiveUser().getEmail();
   
-  if(request.parameters.state == APPROVED_STATE) {
+/*  if(request.parameters.state == APPROVED_STATE) {
     handler.approveByKey(request.parameters.i, user);
   }
   
   if(request.parameters.state == DENIED_STATE) {
     handler.denyByKey(request.parameters.i, user);
+  } 
+*/
+  
+  if(request.parameters.state == COVERAGE_APPROVED_STATE) {
+    handler.approveByCoverageKey(request.parameters.i, user);
+    
+    return HtmlService.createHtmlOutput(SETTINGS.COVERAGE_APPROVAL_PAGE_TEMPLATE);
+  }
+  
+  if(request.parameters.state == MANAGER_APPROVED_STATE) {
+    handler.approveByManagerKey(request.parameters.i, user);
+    
+    return HtmlService.createHtmlOutput(SETTINGS.MANAGER_APPROVAL_PAGE_TEMPLATE);
+  }
+  
+  if(request.parameters.state == DENIED_STATE) {
+    handler.denyByKey(request.parameters.i, user);
+    
+    return HtmlService.createHtmlOutput(SETTINGS.DENIAL_PAGE_TEMPLATE);
   }
 
   if(request.parameters.state == CANCELLED_STATE) {  //added for cancel
     handler.cancelByKey(request.parameters.i, user);
+    
+    return HtmlService.createHtmlOutput(SETTINGS.CANCELLATION_PAGE_TEMPLATE);
   }
   
-  return HtmlService.createHtmlOutput(SETTINGS.CONFIRMATION_PAGE_TEMPLATE);
+  //return HtmlService.createHtmlOutput(SETTINGS.CONFIRMATION_PAGE_TEMPLATE);
 }
 
 function onFormSubmit() {
