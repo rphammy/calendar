@@ -316,6 +316,13 @@ function SheetHandler(sheet) {
     
     MailApp.sendEmail(coverage_email,subject,"",{ htmlBody: message });
     
+    //create calendar event
+    Logger.log(SETTINGS);
+    if (SETTINGS.CREATE_CALENDAR_EVENT == 1) {
+      Logger.log("Creating Calendar Event");
+      _createCalendarEventForDataRow(d);
+    }
+    
     setRowData(_sheet, d);  //changes sheet
   }
   
@@ -472,13 +479,6 @@ function SheetHandler(sheet) {
       subject = Utils.processTemplate(SETTINGS.APPROVAL_NOTICE_EMAIL_SUBJECT, d);
       MailApp.sendEmail(d[SETTINGS.COVERAGE_EMAIL_COLUMN_NAME].match(EMAIL_REGEX), subject, "",{ htmlBody: message });
     }
-    
-    Logger.log(SETTINGS);
-    if (SETTINGS.CREATE_CALENDAR_EVENT == 1) {
-      Logger.log("Creating Calendar Event");
-      _createCalendarEventForDataRow(d);
-    }
-    
     
     setRowData(_sheet, d);
   }
