@@ -506,31 +506,11 @@ function SheetHandler(sheet) {
     subject = Utils.processTemplate(SETTINGS.USER_DENIED_EMAIL_SUBJECT, d);
     MailApp.sendEmail(d.emailAddress, subject, "",{ htmlBody: message });
     
-    setRowData(_sheet, d);
-  }
-  
-  
-  //sends the denial by coverage emails
-  
-  /*
-  var denyByCoverageKey = function(k, user) {
-    var d = _getDataByKey(k);
-    d.state = COVERAGE_DENIED_STATE;
-    //d.actor = user;
-    d.actor = user;
-    
-    //to check if the standard time columns needs to be re-initialized
-    d.standardStartTime = Utilities.formatDate(d.leaveStartDate, "PST", "EEE, MMM d, yyyy hh:mm a");
-    d.standardEndTime = Utilities.formatDate(d.lastDayOfLeave, "PST", "EEE, MMM d, yyyy hh:mm a");
-    
-    message = Utils.processTemplate(SETTINGS.USER_DENIED_EMAIL, d);
-    subject = Utils.processTemplate(SETTINGS.USER_DENIED_EMAIL_SUBJECT, d);
-    MailApp.sendEmail(d.emailAddress, subject, "",{ htmlBody: message });
+     //delete calendar event
+    _deleteCalendarEvent(d); 
     
     setRowData(_sheet, d);
   }
-  */
-  
   
   //cancellation emails
   var cancelByKey = function(k, user) {
@@ -554,11 +534,9 @@ function SheetHandler(sheet) {
     subject = Utils.processTemplate(SETTINGS.USER_CANCELLED_EMAIL_SUBJECT, d);
     MailApp.sendEmail(d[SETTINGS.COVERAGE_EMAIL_COLUMN_NAME].match(EMAIL_REGEX), subject, "",{ htmlBody: message });
     
-    //we shoud have another email that cancels the event?
-    
-    _deleteCalendarEvent(d); //added this line to call function that should delete event but not working rn so im commenting it out
+    //delete calendar event
+    _deleteCalendarEvent(d); 
 
-    
     setRowData(_sheet, d);
   }
 
